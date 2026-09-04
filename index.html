@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>SAT Vocab - Spaced Repetition App</title>
+    <meta name="description" content="Master 900+ SAT vocabulary words with smart spaced repetition, flashcard swipe gestures, and MCQ quiz engine." />
+    <meta name="theme-color" content="#08090d" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="SAT Vocab" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="apple-touch-icon" href="./favicon.svg" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <!-- Modern typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body class="dark-theme">
+    <!-- Mobile Top Header Bar -->
+    <header class="mobile-header" id="mobile-header">
+      <button class="mobile-menu-btn" id="btn-sidebar-toggle" aria-label="Toggle navigation menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div class="mobile-header-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+          <path d="M2 17L12 22L22 17"/>
+          <path d="M2 12L12 17L22 12"/>
+        </svg>
+        <span>SAT Vocab</span>
+      </div>
+      <div class="mobile-streak-badge" title="Daily study streak">
+        <span>🔥</span>
+        <strong id="mobile-streak">0</strong>
+      </div>
+    </header>
+
+    <!-- Overlay Backdrop for Mobile Drawer -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+    <div class="app-container">
+      
+      <!-- Sidebar Navigation / Mobile Drawer -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <div class="logo">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>SAT Vocab</span>
+          </div>
+          <button class="sidebar-close-btn" id="btn-sidebar-close" aria-label="Close navigation menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        
+        <nav class="sidebar-nav">
+          <button class="nav-item active" data-screen="dashboard" id="nav-dashboard">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span>Dashboard</span>
+          </button>
+          <button class="nav-item" data-screen="learn" id="nav-learn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            <span>Learn Batch</span>
+            <span class="badge badge-warning" id="learn-badge" style="display:none;">10</span>
+          </button>
+          <button class="nav-item" data-screen="quiz" id="nav-quiz">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span>Quiz Engine</span>
+            <span class="badge badge-primary" id="quiz-badge" style="display:none;">Active</span>
+          </button>
+          <button class="nav-item" data-screen="review" id="nav-review">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            <span>Review Queue</span>
+            <span class="badge badge-danger" id="review-badge">0</span>
+          </button>
+          <button class="nav-item" data-screen="stats" id="nav-stats">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span>Statistics</span>
+          </button>
+          <button class="nav-item" data-screen="settings" id="nav-settings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span>Settings</span>
+          </button>
+        </nav>
+        
+        <!-- Sidebar Footer Status -->
+        <div class="sidebar-footer">
+          <div class="streak-mini">
+            <span class="streak-icon">🔥</span>
+            <span class="streak-text"><strong id="sidebar-streak">0</strong> day streak</span>
+          </div>
+        </div>
+      </aside>
+      
+      <!-- Main Content Area -->
+      <main class="main-content">
+        <!-- Banner/Alert container for notifications -->
+        <div id="toast-container"></div>
+
+        <!-- Dashboard Screen -->
+        <section class="screen active" id="screen-dashboard">
+          <header class="screen-header">
+            <h1>Study Dashboard</h1>
+            <p class="subtitle" id="dashboard-date">Welcome back!</p>
+          </header>
+          
+          <!-- Key Metrics -->
+          <div class="stats-grid">
+            <div class="card glass-card stat-card">
+              <div class="stat-icon icon-purple">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              </div>
+              <div class="stat-content">
+                <span class="stat-label">Words Learned</span>
+                <span class="stat-value" id="stat-learned-count">0 <small>/ 0</small></span>
+              </div>
+            </div>
+            
+            <div class="card glass-card stat-card">
+              <div class="stat-icon icon-green">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+              </div>
+              <div class="stat-content">
+                <span class="stat-label">Mastery Rate</span>
+                <span class="stat-value" id="stat-mastery-rate">0%</span>
+              </div>
+            </div>
+
+            <div class="card glass-card stat-card">
+              <div class="stat-icon icon-red">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div class="stat-content">
+                <span class="stat-label">Weak Words</span>
+                <span class="stat-value" id="stat-weak-count">0</span>
+              </div>
+            </div>
+
+            <div class="card glass-card stat-card">
+              <div class="stat-icon icon-amber">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <div class="stat-content">
+                <span class="stat-label">Due for Review</span>
+                <span class="stat-value" id="stat-due-count">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-sections">
+            <!-- Session Progress Panel -->
+            <div class="card glass-card session-panel">
+              <h2>Active Study Batch</h2>
+              <p>Work through batches of 10 words. Study them first, then take a quiz to lock in progress.</p>
+              
+              <div class="batch-progress-container">
+                <div class="progress-info">
+                  <span id="batch-step-text">Batch State: Ready to study</span>
+                  <span id="batch-percent-text">0%</span>
+                </div>
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill" id="batch-progress-fill" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <div class="action-buttons">
+                <button class="btn btn-primary" id="btn-start-learn">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  <span>Study Current Batch (10 words)</span>
+                </button>
+                <button class="btn btn-secondary" id="btn-start-quiz" disabled>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <span>Start MCQ Quiz</span>
+                </button>
+                <button class="btn btn-ghost btn-sm" id="btn-reset-batch" style="display:none;" title="Discard current batch to get a new one">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  <span>Discard Batch</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Quick Stats Chart/Breakdown -->
+            <div class="card glass-card status-breakdown-panel">
+              <h2>Database Distribution</h2>
+              <div class="breakdown-chart">
+                <div class="chart-segment segment-mastered" id="bar-mastered" style="width: 0%" title="Mastered"></div>
+                <div class="chart-segment segment-review" id="bar-review" style="width: 0%" title="Review"></div>
+                <div class="chart-segment segment-learning" id="bar-learning" style="width: 0%" title="Learning"></div>
+                <div class="chart-segment segment-weak" id="bar-weak" style="width: 0%" title="Weak"></div>
+                <div class="chart-segment segment-new" id="bar-new" style="width: 100%" title="New"></div>
+              </div>
+              <ul class="legend-list">
+                <li><span class="legend-dot dot-new"></span> New: <span id="lbl-count-new">0</span></li>
+                <li><span class="legend-dot dot-learning"></span> Learning: <span id="lbl-count-learning">0</span></li>
+                <li><span class="legend-dot dot-review"></span> Review: <span id="lbl-count-review">0</span></li>
+                <li><span class="legend-dot dot-mastered"></span> Mastered: <span id="lbl-count-mastered">0</span></li>
+                <li><span class="legend-dot dot-weak"></span> Weak: <span id="lbl-count-weak">0</span></li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- Learn Screen (Flashcards) -->
+        <section class="screen" id="screen-learn">
+          <header class="screen-header navigation-header">
+            <div>
+              <h1>Study Batch</h1>
+              <p class="subtitle" id="learn-progress-subtitle">Word 1 of 10</p>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-exit-learn">Exit to Dashboard</button>
+          </header>
+
+          <div class="study-container">
+            <!-- Flashcard Frame -->
+            <div class="flashcard-wrapper">
+              <div class="flashcard" id="flashcard">
+                
+                <!-- Front of Card -->
+                <div class="card-face card-front">
+                  <div class="card-header-pos">
+                    <span class="badge badge-pos" id="card-pos-front">(v.)</span>
+                    <span class="badge badge-status" id="card-status-front">new</span>
+                  </div>
+                  <h2 class="card-word" id="card-word-front">abase</h2>
+                  <p class="tap-hint">Tap Card or press <strong>Enter</strong> to flip</p>
+                </div>
+                
+                <!-- Back of Card -->
+                <div class="card-face card-body card-back">
+                  <div class="card-header-pos">
+                    <span class="badge badge-pos" id="card-pos-back">(v.)</span>
+                    <span class="badge badge-status" id="card-status-back">new</span>
+                  </div>
+                  <h3 class="card-word-back" id="card-word-back">abase</h3>
+                  <div class="card-pos-subtitle" id="card-pos-subtitle-back"></div>
+                  
+                  <div class="senses-container" id="card-senses-container">
+                    <!-- Senses are dynamically injected here -->
+                  </div>
+
+                  <p class="tap-hint-back">Tap Card or press <strong>Enter</strong> to flip back</p>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Learning Feedback controls (Only visible on back or separate panel) -->
+            <div class="card glass-card feedback-panel" id="learning-feedback-panel" style="opacity: 0.5; pointer-events: none;">
+              <h3>How well did you know this word?</h3>
+              <div class="feedback-buttons">
+                <button class="btn btn-danger btn-feedback" data-val="wrong" title="Wrong / Forgot (W)">
+                  <span class="btn-icon">❌</span>
+                  <span>Forgot</span>
+                </button>
+                <button class="btn btn-red btn-feedback" data-val="weak" title="Weak / Hard (S)">
+                  <span class="btn-icon">⚠️</span>
+                  <span>Hard</span>
+                </button>
+                <button class="btn btn-amber btn-feedback" data-val="learning" title="Getting There (D)">
+                  <span class="btn-icon">⏳</span>
+                  <span>Learning</span>
+                </button>
+                <button class="btn btn-green btn-feedback" data-val="correct" title="Knew It / Easy (F)">
+                  <span class="btn-icon">✅</span>
+                  <span>Easy</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Navigation Controls -->
+            <div class="study-nav">
+              <button class="btn btn-secondary" id="btn-learn-prev">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                <span>Previous (Left)</span>
+              </button>
+              <div class="indicators" id="learn-indicators">
+                <!-- Dots for progress -->
+              </div>
+              <button class="btn btn-secondary" id="btn-learn-next">
+                <span>Next (Right)</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+            
+            <div class="batch-complete-card card glass-card" id="batch-complete-card" style="display:none;">
+              <h2>Batch Study Complete! 🎉</h2>
+              <p>You have reviewed all 10 words in this batch. Now, take a quick quiz to lock in your memory and update their intervals.</p>
+              <button class="btn btn-primary btn-lg" id="btn-proceed-to-quiz">Start MCQ Quiz</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Quiz Screen -->
+        <section class="screen" id="screen-quiz">
+          <header class="screen-header navigation-header">
+            <div>
+              <h1>Quiz Engine</h1>
+              <p class="subtitle" id="quiz-progress-subtitle">Question 1 of 10</p>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-exit-quiz">Exit to Dashboard</button>
+          </header>
+
+          <div class="quiz-container">
+            <!-- Empty Quiz State (when no quiz is active) -->
+            <div class="card glass-card quiz-empty-card" id="quiz-empty-card" style="display:none;">
+              <div class="quiz-empty-icon">🎯</div>
+              <h2>No Active Quiz Session</h2>
+              <p>Work through a study batch first, or launch a quick quiz on words currently due for review.</p>
+              <div class="action-buttons" style="justify-content:center;">
+                <button class="btn btn-primary" id="btn-quiz-empty-study">Study New Batch</button>
+                <button class="btn btn-secondary" id="btn-quiz-empty-review">Practice Due Words</button>
+              </div>
+            </div>
+
+            <div class="card glass-card quiz-card">
+              <div class="quiz-q-meta">
+                <span class="badge badge-pos" id="quiz-word-pos">POS</span>
+              </div>
+              
+              <!-- Question Text -->
+              <h2 class="quiz-question" id="quiz-question-text">Question Prompt</h2>
+              
+              <!-- MCQ choices -->
+              <div class="quiz-choices" id="quiz-choices-grid">
+                <button class="choice-btn" data-idx="0">
+                  <span class="choice-letter">A</span>
+                  <span class="choice-text">Option Text</span>
+                </button>
+                <button class="choice-btn" data-idx="1">
+                  <span class="choice-letter">B</span>
+                  <span class="choice-text">Option Text</span>
+                </button>
+                <button class="choice-btn" data-idx="2">
+                  <span class="choice-letter">C</span>
+                  <span class="choice-text">Option Text</span>
+                </button>
+                <button class="choice-btn" data-idx="3">
+                  <span class="choice-letter">D</span>
+                  <span class="choice-text">Option Text</span>
+                </button>
+              </div>
+
+              <!-- Answer Feedback Overlay / Section -->
+              <div class="quiz-feedback-box" id="quiz-feedback-box" style="display:none;">
+                <div class="feedback-header">
+                  <span class="feedback-status-badge" id="quiz-feedback-status">Correct!</span>
+                </div>
+                <div class="feedback-body">
+                  <p class="meaning-reveal"><strong>Definition:</strong> <span id="quiz-reveal-meaning">...</span></p>
+                  <p class="example-reveal" id="quiz-reveal-example-box"><strong>Example Sentence:</strong> <br><em id="quiz-reveal-example">...</em></p>
+                </div>
+                <button class="btn btn-primary" id="btn-quiz-continue">Continue (Enter)</button>
+              </div>
+            </div>
+
+            <!-- Quiz End Summary Card -->
+            <div class="card glass-card quiz-results-card" id="quiz-results-card" style="display:none;">
+              <h2>Quiz Completed! 🌟</h2>
+              <div class="quiz-score-circle">
+                <span id="quiz-score-percent">0%</span>
+                <small id="quiz-score-ratio">0 / 10</small>
+              </div>
+              <p id="quiz-results-summary">Good job reinforcing your batch! Distances are updated.</p>
+              <button class="btn btn-primary btn-lg" id="btn-quiz-finish">Back to Dashboard</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Review Screen -->
+        <section class="screen" id="screen-review">
+          <header class="screen-header navigation-header">
+            <div>
+              <h1>Review Queue</h1>
+              <p class="subtitle" id="review-subtitle">Strengthen weak areas and spaced reviews.</p>
+            </div>
+          </header>
+
+          <div class="review-dashboard-layout">
+            <div class="card glass-card review-launcher">
+              <h2>Select Review Type</h2>
+              <p>Focus your energy on specific sections of your queue:</p>
+              
+              <div class="review-options">
+                <button class="review-opt-card" id="btn-rev-due">
+                  <span class="opt-badge font-amber" id="rev-due-count">0</span>
+                  <h3>Due Reviews</h3>
+                  <p>Spaced repetition reviews scheduled for today.</p>
+                </button>
+                
+                <button class="review-opt-card" id="btn-rev-weak">
+                  <span class="opt-badge font-red" id="rev-weak-count">0</span>
+                  <h3>Weak Words Only</h3>
+                  <p>Words you have repeatedly missed or marked as Hard.</p>
+                </button>
+
+                <button class="review-opt-card" id="btn-rev-missed">
+                  <span class="opt-badge font-purple" id="rev-missed-count">0</span>
+                  <h3>Recently Missed</h3>
+                  <p>Words missed in your latest study/quiz sessions.</p>
+                </button>
+              </div>
+            </div>
+
+            <!-- Active Review UI (Similar to Learn/Flashcard) -->
+            <div class="review-active-container" id="review-active-container" style="display:none;">
+              <header class="review-active-header">
+                <h3 id="review-type-title">Review Session</h3>
+                <span class="subtitle" id="review-active-progress">Word 1 of 0</span>
+                <button class="btn btn-secondary btn-sm" id="btn-exit-active-review">End Session</button>
+              </header>
+
+              <div class="flashcard-wrapper">
+                <div class="flashcard" id="review-flashcard">
+                  
+                  <div class="card-face card-front">
+                    <div class="card-header-pos">
+                      <span class="badge badge-pos" id="rev-pos-front">(v.)</span>
+                      <span class="badge badge-status" id="rev-status-front">weak</span>
+                    </div>
+                    <h2 class="card-word" id="rev-word-front">abase</h2>
+                    <p class="tap-hint">Tap Card or press <strong>Enter</strong> to flip</p>
+                  </div>
+                  
+                  <div class="card-face card-body card-back">
+                    <div class="card-header-pos">
+                      <span class="badge badge-pos" id="rev-pos-back">(v.)</span>
+                      <span class="badge badge-status" id="rev-status-back">weak</span>
+                    </div>
+                    <h3 class="card-word-back" id="rev-word-back">abase</h3>
+                    <div class="card-pos-subtitle" id="rev-pos-subtitle-back"></div>
+                    
+                    <div class="senses-container" id="rev-senses-container">
+                      <!-- Dynamic -->
+                    </div>
+
+                    <p class="tap-hint-back">Tap Card or press <strong>Enter</strong> to flip back</p>
+                  </div>
+                  
+                </div>
+              </div>
+
+              <!-- Active Review Answer Inputs -->
+              <div class="card glass-card feedback-panel" id="review-feedback-panel" style="opacity:0.5; pointer-events:none;">
+                <h3>Did you remember this word?</h3>
+                <div class="feedback-buttons">
+                  <button class="btn btn-danger btn-review-feedback" data-val="wrong" title="Wrong (W)">
+                    <span class="btn-icon">❌</span>
+                    <span>Forgot</span>
+                  </button>
+                  <button class="btn btn-green btn-review-feedback" data-val="correct" title="Correct (F)">
+                    <span class="btn-icon">✅</span>
+                    <span>Remembered</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="study-nav">
+                <button class="btn btn-secondary" id="btn-review-prev">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                  <span>Prev</span>
+                </button>
+                <div class="indicators" id="review-indicators"></div>
+                <button class="btn btn-secondary" id="btn-review-next">
+                  <span>Next</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Complete screen -->
+            <div class="card glass-card session-complete-card" id="review-complete-card" style="display:none;">
+              <h2>Review Session Completed! 🌟</h2>
+              <p>Your progress has been updated in IndexedDB. Keep reviewing daily to maintain your vocabulary retention.</p>
+              <button class="btn btn-primary" id="btn-review-finish">Finish Session</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Stats Screen -->
+        <section class="screen" id="screen-stats">
+          <header class="screen-header">
+            <h1>Statistics & Performance</h1>
+            <p class="subtitle">An overview of your SAT vocabulary mastery.</p>
+          </header>
+
+          <div class="stats-page-grid">
+            <div class="card glass-card stats-hero-card">
+              <div class="hero-metric">
+                <span class="value" id="stats-accuracy">0%</span>
+                <span class="label">Overall Quiz Accuracy</span>
+              </div>
+              <div class="hero-metric">
+                <span class="value" id="stats-streak">0 days</span>
+                <span class="label">Current Daily Streak</span>
+              </div>
+            </div>
+
+            <div class="card glass-card stats-list-card">
+              <h3>Weak Words (<span id="stats-weak-count">0</span>)</h3>
+              <p class="card-desc">These words have been missed recently or marked as Hard. Make sure to review them.</p>
+              <div class="words-table-wrapper">
+                <table class="words-table">
+                  <thead>
+                    <tr>
+                      <th>Word</th>
+                      <th>POS</th>
+                      <th>Wrong / Correct</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="stats-weak-tbody">
+                    <!-- Loaded dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card glass-card stats-list-card">
+              <h3>Mastered Words (<span id="stats-mastered-count">0</span>)</h3>
+              <p class="card-desc">Words that you have successfully recalled 6 or more times consecutively.</p>
+              <div class="words-table-wrapper">
+                <table class="words-table">
+                  <thead>
+                    <tr>
+                      <th>Word</th>
+                      <th>POS</th>
+                      <th>Streak</th>
+                      <th>Next Review</th>
+                    </tr>
+                  </thead>
+                  <tbody id="stats-mastered-tbody">
+                    <!-- Loaded dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Settings Screen -->
+        <section class="screen" id="screen-settings">
+          <header class="screen-header">
+            <h1>Settings & Backups</h1>
+            <p class="subtitle">Manage vocabulary files, import/export backups, and view keys.</p>
+          </header>
+
+          <div class="settings-grid">
+            
+            <!-- File Import/Export -->
+            <div class="card glass-card settings-section">
+              <h2>Data Management</h2>
+              
+              <div class="setting-item">
+                <div class="setting-info">
+                  <h3>Manual Backup</h3>
+                  <p>Download your study history as a JSON file, or restore progress from a previous export.</p>
+                </div>
+                <div class="setting-actions flex-wrap">
+                  <button class="btn btn-secondary" id="btn-export-progress">Export Progress (JSON)</button>
+                  <button class="btn btn-secondary" id="btn-trigger-import">
+                    <span>Import Progress</span>
+                  </button>
+                  <input type="file" id="file-import-progress" accept=".json" style="display:none;">
+                </div>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <h3>Vocabulary Import</h3>
+                  <p>Upload a new vocabulary Markdown file. This will parse and populate the word bank.</p>
+                </div>
+                <div class="setting-actions">
+                  <button class="btn btn-secondary" id="btn-trigger-markdown-import">Import Markdown File</button>
+                  <input type="file" id="file-import-markdown" accept=".md" style="display:none;">
+                </div>
+              </div>
+
+              <div class="setting-item border-danger">
+                <div class="setting-info">
+                  <h3>Reset History</h3>
+                  <p>Clear all correct/wrong streaks and statuses, resetting study progress back to 0. (Vocabulary remains unchanged).</p>
+                </div>
+                <div class="setting-actions">
+                  <button class="btn btn-danger" id="btn-reset-progress">Reset Progress Only</button>
+                </div>
+              </div>
+
+              <div class="setting-item border-danger">
+                <div class="setting-info">
+                  <h3>Full Database Reset</h3>
+                  <p>Wipe all vocabulary records and study progress. Useful for a clean restart.</p>
+                </div>
+                <div class="setting-actions">
+                  <button class="btn btn-danger" id="btn-reset-all">Reset All Data</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Keyboard Shortcuts Info -->
+            <div class="card glass-card settings-section">
+              <h2>Keyboard Shortcuts</h2>
+              <p>Practice vocabulary faster without touching your mouse using the following keys:</p>
+              
+              <table class="shortcuts-table">
+                <thead>
+                  <tr>
+                    <th>Shortcut</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><kbd>Enter</kbd></td>
+                    <td>Flip flashcard / Check answer / Continue Quiz</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>→</kbd> (Right Arrow)</td>
+                    <td>Next Card / Continue Study flow</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>←</kbd> (Left Arrow)</td>
+                    <td>Previous Card</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>F</kbd></td>
+                    <td>Mark card as <strong>Easy / Correct</strong> (Learn Mode)</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>D</kbd></td>
+                    <td>Mark card as <strong>Learning</strong> (Learn Mode)</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>S</kbd></td>
+                    <td>Mark card as <strong>Hard / Weak</strong> (Learn Mode)</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>W</kbd></td>
+                    <td>Mark card as <strong>Forgot / Wrong</strong> (Learn Mode)</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> / <kbd>4</kbd> or <kbd>A</kbd> / <kbd>B</kbd> / <kbd>C</kbd> / <kbd>D</kbd></td>
+                    <td>Select MCQ option A, B, C, or D respectively (Quiz Mode)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+
+      <!-- Mobile Bottom Navigation Bar -->
+      <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+        <button class="mobile-nav-item active" data-screen="dashboard" id="mob-nav-dashboard">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Dashboard</span>
+        </button>
+        <button class="mobile-nav-item" data-screen="learn" id="mob-nav-learn">
+          <span class="nav-icon-wrap">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            <span class="nav-dot-badge" id="learn-badge-bottom" style="display:none;"></span>
+          </span>
+          <span>Learn</span>
+        </button>
+        <button class="mobile-nav-item" data-screen="quiz" id="mob-nav-quiz">
+          <span class="nav-icon-wrap">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="nav-dot-badge" id="quiz-badge-bottom" style="display:none;"></span>
+          </span>
+          <span>Quiz</span>
+        </button>
+        <button class="mobile-nav-item" data-screen="review" id="mob-nav-review">
+          <span class="nav-icon-wrap">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            <span class="nav-num-badge" id="review-badge-bottom" style="display:none;">0</span>
+          </span>
+          <span>Review</span>
+        </button>
+        <button class="mobile-nav-item" data-screen="stats" id="mob-nav-stats">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Stats</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Entry module -->
+    <script type="module" src="/src/app.js"></script>
+  </body>
+</html>

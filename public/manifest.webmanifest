@@ -1,0 +1,17 @@
+{
+  "name": "SAT Vocab - Spaced Repetition",
+  "short_name": "SAT Vocab",
+  "description": "Master 900+ SAT vocabulary words with smart spaced repetition flashcards and MCQ quizzes.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#08090d",
+  "theme_color": "#08090d",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
