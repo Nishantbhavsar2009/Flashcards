@@ -29,16 +29,17 @@
         </svg>
       </button>
       <div class="mobile-header-logo">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
-          <path d="M2 17L12 22L22 17"/>
-          <path d="M2 12L12 17L22 12"/>
-        </svg>
-        <span>SAT Vocab</span>
+        <span class="mobile-logo-icon" id="mobile-logo-icon">🏛️</span>
+        <span id="mobile-logo-title">NATA Vocab</span>
       </div>
-      <div class="mobile-streak-badge" title="Daily study streak">
-        <span>🔥</span>
-        <strong id="mobile-streak">0</strong>
+      <div class="mobile-header-actions">
+        <button class="mobile-deck-toggle-btn" id="btn-mobile-deck-toggle" title="Switch Deck">
+          <span class="mobile-deck-indicator" id="mobile-deck-indicator">NATA</span>
+        </button>
+        <div class="mobile-streak-badge" title="Daily study streak">
+          <span>🔥</span>
+          <strong id="mobile-streak">0</strong>
+        </div>
       </div>
     </header>
 
@@ -51,12 +52,8 @@
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
           <div class="logo">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span>SAT Vocab</span>
+            <span class="logo-icon" id="sidebar-logo-icon">🏛️</span>
+            <span id="sidebar-logo-title">NATA Vocab</span>
           </div>
           <button class="sidebar-close-btn" id="btn-sidebar-close" aria-label="Close navigation menu">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -64,6 +61,27 @@
               <line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>
+        </div>
+        
+        <!-- Deck Switcher / Segmented Selector -->
+        <div class="sidebar-deck-picker">
+          <span class="sidebar-deck-label">Active Curriculum</span>
+          <div class="deck-segmented-control" role="group" aria-label="Vocabulary Deck Selector">
+            <button class="deck-segment-btn active" data-deck="nata" id="btn-deck-nata">
+              <span class="deck-segment-icon">🏛️</span>
+              <span class="deck-segment-details">
+                <strong>NATA Arch</strong>
+                <small>493 words</small>
+              </span>
+            </button>
+            <button class="deck-segment-btn" data-deck="sat" id="btn-deck-sat">
+              <span class="deck-segment-icon">🎓</span>
+              <span class="deck-segment-details">
+                <strong>SAT Vocab</strong>
+                <small>994 words</small>
+              </span>
+            </button>
+          </div>
         </div>
         
         <nav class="sidebar-nav">
@@ -113,8 +131,23 @@
         <!-- Dashboard Screen -->
         <section class="screen active" id="screen-dashboard">
           <header class="screen-header">
-            <h1>Study Dashboard</h1>
-            <p class="subtitle" id="dashboard-date">Welcome back!</p>
+            <div class="dashboard-header-flex">
+              <div>
+                <div class="deck-badge-pill" id="dashboard-deck-pill">
+                  <span id="dashboard-deck-icon">🏛️</span>
+                  <span id="dashboard-deck-label">NATA & Architecture Master Deck</span>
+                  <span class="deck-count-pill" id="dashboard-deck-count">493 cards</span>
+                </div>
+                <h1 id="dashboard-heading">Study Dashboard</h1>
+                <p class="subtitle" id="dashboard-date">Welcome back!</p>
+              </div>
+              <div class="dashboard-header-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-dashboard-toggle-deck">
+                  <span id="dashboard-toggle-icon">🎓</span>
+                  <span id="dashboard-toggle-text">Switch to SAT Vocab</span>
+                </button>
+              </div>
+            </div>
           </header>
           
           <!-- Key Metrics -->
@@ -231,7 +264,11 @@
                 <!-- Front of Card -->
                 <div class="card-face card-front">
                   <div class="card-header-pos">
-                    <span class="badge badge-pos" id="card-pos-front">(v.)</span>
+                    <div class="card-badges-group">
+                      <span class="badge badge-pos" id="card-pos-front">(v.)</span>
+                      <span class="badge badge-category" id="card-cat-front" style="display:none;"></span>
+                      <span class="badge badge-priority" id="card-prio-front" style="display:none;">Core</span>
+                    </div>
                     <span class="badge badge-status" id="card-status-front">new</span>
                   </div>
                   <h2 class="card-word" id="card-word-front">abase</h2>
@@ -241,7 +278,11 @@
                 <!-- Back of Card -->
                 <div class="card-face card-body card-back">
                   <div class="card-header-pos">
-                    <span class="badge badge-pos" id="card-pos-back">(v.)</span>
+                    <div class="card-badges-group">
+                      <span class="badge badge-pos" id="card-pos-back">(v.)</span>
+                      <span class="badge badge-category" id="card-cat-back" style="display:none;"></span>
+                      <span class="badge badge-priority" id="card-prio-back" style="display:none;">Core</span>
+                    </div>
                     <span class="badge badge-status" id="card-status-back">new</span>
                   </div>
                   <h3 class="card-word-back" id="card-word-back">abase</h3>
@@ -427,7 +468,11 @@
                   
                   <div class="card-face card-front">
                     <div class="card-header-pos">
-                      <span class="badge badge-pos" id="rev-pos-front">(v.)</span>
+                      <div class="card-badges-group">
+                        <span class="badge badge-pos" id="rev-pos-front">(v.)</span>
+                        <span class="badge badge-category" id="rev-cat-front" style="display:none;"></span>
+                        <span class="badge badge-priority" id="rev-prio-front" style="display:none;">Core</span>
+                      </div>
                       <span class="badge badge-status" id="rev-status-front">weak</span>
                     </div>
                     <h2 class="card-word" id="rev-word-front">abase</h2>
@@ -436,7 +481,11 @@
                   
                   <div class="card-face card-body card-back">
                     <div class="card-header-pos">
-                      <span class="badge badge-pos" id="rev-pos-back">(v.)</span>
+                      <div class="card-badges-group">
+                        <span class="badge badge-pos" id="rev-pos-back">(v.)</span>
+                        <span class="badge badge-category" id="rev-cat-back" style="display:none;"></span>
+                        <span class="badge badge-priority" id="rev-prio-back" style="display:none;">Core</span>
+                      </div>
                       <span class="badge badge-status" id="rev-status-back">weak</span>
                     </div>
                     <h3 class="card-word-back" id="rev-word-back">abase</h3>
@@ -563,6 +612,19 @@
             <div class="card glass-card settings-section">
               <h2>Data Management</h2>
               
+              <div class="setting-item">
+                <div class="setting-info">
+                  <h3>Active Curriculum / Deck</h3>
+                  <p>Select which exam vocabulary list you want to study. Progress is kept separate for each deck.</p>
+                </div>
+                <div class="setting-actions">
+                  <select class="select-input" id="setting-deck-select" aria-label="Select active curriculum">
+                    <option value="nata">🏛️ NATA & Architecture (493 cards)</option>
+                    <option value="sat">🎓 SAT Vocab (994 words)</option>
+                  </select>
+                </div>
+              </div>
+
               <div class="setting-item">
                 <div class="setting-info">
                   <h3>Manual Backup</h3>

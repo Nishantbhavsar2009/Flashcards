@@ -172,10 +172,30 @@ export function generateQuiz(batch, fullVocab) {
 
         // Build question text
         let questionText = '';
+        const isIdiom = targetWord.partOfSpeech?.includes('idiom') || targetWord.category?.includes('Idiom');
+        const isConfusable = targetWord.partOfSpeech?.includes('confusable') || targetWord.category?.includes('Confusable');
+        const isArch = targetWord.deck === 'nata' && targetWord.code?.startsWith('A');
+
         if (type === 'definition') {
-            questionText = `What is the meaning of the word <strong>"${targetWord.word}"</strong> ${targetWord.partOfSpeech}?`;
+            if (isIdiom) {
+                questionText = `What is the meaning of the idiom or phrase <strong>"${targetWord.word}"</strong>?`;
+            } else if (isConfusable) {
+                questionText = `What is the distinction between <strong>"${targetWord.word}"</strong>?`;
+            } else if (isArch) {
+                questionText = `What is the meaning of the architectural term <strong>"${targetWord.word}"</strong> ${targetWord.partOfSpeech}?`;
+            } else {
+                questionText = `What is the meaning of the word <strong>"${targetWord.word}"</strong> ${targetWord.partOfSpeech}?`;
+            }
         } else {
-            questionText = `Which word matches this definition:<br><em class="def-highlight">"${correctMeaning}"</em>?`;
+            if (isIdiom) {
+                questionText = `Which idiom or phrase matches this meaning:<br><em class="def-highlight">"${correctMeaning}"</em>?`;
+            } else if (isConfusable) {
+                questionText = `Which word pair matches this distinction:<br><em class="def-highlight">"${correctMeaning}"</em>?`;
+            } else if (isArch) {
+                questionText = `Which architectural term matches this definition:<br><em class="def-highlight">"${correctMeaning}"</em>?`;
+            } else {
+                questionText = `Which word matches this definition:<br><em class="def-highlight">"${correctMeaning}"</em>?`;
+            }
         }
 
         questions.push({

@@ -6,18 +6,20 @@
 
 import '../style.css';
 import { initDb, getAllVocab, saveVocabList, getAllProgress, getProgressForWord, saveProgress, resetProgress, resetAll } from './db.js';
-import { parseVocab } from './parser.js';
+import { parseVocab, parseNataVocab } from './parser.js';
 import { generateSessionQueue, updateProgress } from './scheduler.js';
 import { generateQuiz } from './quiz.js';
 import { exportProgress, importProgress, saveSessionState, loadSessionState, clearSessionState } from './storage.js';
 import { showToast, renderSensesList, updateDashboardStats, renderIndicators, renderStatsScreen } from './ui.js';
 import synonymsData from './synonyms.json';
 
-// Raw vocabulary file import via Vite ?raw suffix
+// Raw vocabulary files import via Vite ?raw suffix
 import rawVocabText from '../sat.vocab.pdf_extracted.md?raw';
+import rawNataVocabText from '../nata.vocab.md?raw';
 
 // Application State
 const state = {
+    activeDeck: localStorage.getItem('Active_Deck') || 'nata', // 'nata' | 'sat'
     currentScreen: 'dashboard',
     fullVocabList: [],
     progressList: [],
@@ -53,11 +55,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         await initDb();
         await loadDatabase();
+        updateDeckUI();
         restoreSession();
         setupEventListeners();
         setupKeyboardShortcuts();
         updateUI();
-        showToast('Application initialized successfully!', 'success');
+        showToast(`Loaded ${state.activeDeck === 'nata' ? 'NATA & Architecture' : 'SAT Vocab'} Master Deck!`, 'success');
     } catch (err) {
         console.error('Initialization error:', err);
         showToast('Database error. Check console logs.', 'danger');
@@ -66,42 +69,54 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Load vocab and progress lists from database
 async function loadDatabase() {
-    let vocab = await getAllVocab();
-    
-    // Initial populate if empty
-    if (vocab.length === 0) {
-        showToast('First load: Parsing vocabulary data...', 'info');
-        const parsedWords = parseVocab(rawVocabText);
-        await saveVocabList(parsedWords);
-        vocab = parsedWords;
-        showToast(`Parsed and loaded ${parsedWords.length} words.`, 'success');
+    // 1. Check and populate NATA words in IndexedDB if missing or incomplete
+    let nataVocab = await getAllVocab('nata');
+    if (nataVocab.length < 493) {
+        console.log('Populating NATA vocabulary database...');
+        const parsedNata = parseNataVocab(rawNataVocabText);
+        await saveVocabList(parsedNata, 'nata');
+        nataVocab = parsedNata;
+    }
+
+    // 2. Check and populate SAT words in IndexedDB if missing or incomplete
+    let satVocab = await getAllVocab('sat');
+    if (satVocab.length < 900) {
+        console.log('Populating SAT vocabulary database...');
+        const parsedSat = parseVocab(rawVocabText);
+        await saveVocabList(parsedSat, 'sat');
+        satVocab = parsedSat;
     } else {
         // Auto-fix migration check: if aberration has the old incorrect definition, clear and reload!
-        const aberrationVocab = vocab.find(w => w.id === 'aberration');
+        const aberrationVocab = satVocab.find(w => w.id === 'aberration');
         if (aberrationVocab && aberrationVocab.senses.some(s => s.meaning.includes('World Series'))) {
             console.log('Migrating vocabulary store to fix parsing bug...');
-            const parsedWords = parseVocab(rawVocabText);
-            await saveVocabList(parsedWords);
-            vocab = parsedWords;
-            showToast('Vocabulary database successfully updated & healed!', 'success');
+            const parsedSat = parseVocab(rawVocabText);
+            await saveVocabList(parsedSat, 'sat');
+            satVocab = parsedSat;
         }
     }
 
-    // Inject synonyms at runtime
-    vocab.forEach(word => {
-        if (synonymsData[word.id]) {
-            word.senses.forEach((sense, sIdx) => {
-                sense.synonyms = synonymsData[word.id][sIdx] || [];
-            });
-        } else {
-            word.senses.forEach(sense => {
-                sense.synonyms = [];
-            });
-        }
-    });
+    // 3. Select active deck vocabulary
+    const activeDeck = state.activeDeck || 'nata';
+    let vocab = activeDeck === 'nata' ? nataVocab : satVocab;
+
+    // Inject synonyms into SAT words if active deck is SAT
+    if (activeDeck === 'sat') {
+        vocab.forEach(word => {
+            if (synonymsData[word.id]) {
+                word.senses.forEach((sense, sIdx) => {
+                    sense.synonyms = synonymsData[word.id][sIdx] || [];
+                });
+            } else {
+                word.senses.forEach(sense => {
+                    sense.synonyms = [];
+                });
+            }
+        });
+    }
 
     state.fullVocabList = vocab;
-    state.progressList = await getAllProgress();
+    state.progressList = await getAllProgress(activeDeck);
     
     // Recalculate streak
     calculateStreak();
@@ -185,9 +200,102 @@ function markStudyActivity() {
     if (mobileStreak) mobileStreak.innerText = state.streak;
 }
 
+// Synchronize active deck visual state across UI (headers, badges, titles, toggles)
+function updateDeckUI() {
+    const isNata = state.activeDeck === 'nata';
+    const deckName = isNata ? 'NATA Vocab' : 'SAT Vocab';
+    const deckIcon = isNata ? '🏛️' : '🎓';
+    const totalWords = state.fullVocabList.length;
+
+    // Document title
+    document.title = isNata 
+        ? 'NATA & Architecture Vocab - Spaced Repetition Flashcards'
+        : 'SAT Vocab - Spaced Repetition App';
+
+    // Mobile top bar
+    const mobileIcon = document.getElementById('mobile-logo-icon');
+    if (mobileIcon) mobileIcon.innerText = deckIcon;
+    const mobileTitle = document.getElementById('mobile-logo-title');
+    if (mobileTitle) mobileTitle.innerText = `${deckName}`;
+    const mobileIndicator = document.getElementById('mobile-deck-indicator');
+    if (mobileIndicator) mobileIndicator.innerText = isNata ? 'NATA' : 'SAT';
+
+    // Sidebar
+    const sidebarIcon = document.getElementById('sidebar-logo-icon');
+    if (sidebarIcon) sidebarIcon.innerText = deckIcon;
+    const sidebarTitle = document.getElementById('sidebar-logo-title');
+    if (sidebarTitle) sidebarTitle.innerText = `${deckName}`;
+
+    const btnDeckNata = document.getElementById('btn-deck-nata');
+    if (btnDeckNata) btnDeckNata.classList.toggle('active', isNata);
+    const btnDeckSat = document.getElementById('btn-deck-sat');
+    if (btnDeckSat) btnDeckSat.classList.toggle('active', !isNata);
+
+    // Dashboard banner pill
+    const dashIcon = document.getElementById('dashboard-deck-icon');
+    if (dashIcon) dashIcon.innerText = deckIcon;
+    const dashLabel = document.getElementById('dashboard-deck-label');
+    if (dashLabel) dashLabel.innerText = isNata ? 'NATA & Architecture Master Deck' : 'SAT Vocabulary Deck';
+    const dashCount = document.getElementById('dashboard-deck-count');
+    if (dashCount) dashCount.innerText = `${totalWords} cards`;
+
+    // Dashboard toggle button
+    const dashToggleIcon = document.getElementById('dashboard-toggle-icon');
+    if (dashToggleIcon) dashToggleIcon.innerText = isNata ? '🎓' : '🏛️';
+    const dashToggleText = document.getElementById('dashboard-toggle-text');
+    if (dashToggleText) dashToggleText.innerText = isNata ? 'Switch to SAT Vocab' : 'Switch to NATA Arch';
+
+    // Settings dropdown selector
+    const settingSelect = document.getElementById('setting-deck-select');
+    if (settingSelect) settingSelect.value = state.activeDeck;
+}
+
+// Switch between active curriculum decks ('nata' vs 'sat')
+async function switchDeck(newDeck) {
+    if (!newDeck || (state.activeDeck === newDeck && state.fullVocabList.length > 0)) return;
+
+    // 1. Save active session state for previous deck before switching
+    syncSession();
+
+    // 2. Update state and localStorage
+    state.activeDeck = newDeck;
+    localStorage.setItem('Active_Deck', newDeck);
+
+    // 3. Clear temporary batch/quiz/review variables in memory
+    state.currentBatch = [];
+    state.currentWordIndex = 0;
+    state.learnAnswers = [];
+    state.isCardFlipped = false;
+    state.quizQuestions = [];
+    state.currentQuizIndex = 0;
+    state.quizState = 'question';
+    state.quizCorrectCount = 0;
+    state.reviewType = null;
+    state.reviewQueue = [];
+    state.currentReviewIndex = 0;
+    state.isReviewFlipped = false;
+    state.reviewAnswers = [];
+    state.reviewState = 'setup';
+
+    // 4. Reload database data for target deck
+    await loadDatabase();
+
+    // 5. Update UI widgets
+    updateDeckUI();
+
+    // 6. Restore any previous session for the new deck
+    restoreSession();
+
+    // 7. Rerender screen
+    navigateTo(state.currentScreen || 'dashboard');
+
+    const label = newDeck === 'nata' ? 'NATA & Architecture Deck' : 'SAT Vocab Deck';
+    showToast(`Switched active deck to ${label}!`, 'info');
+}
+
 // Restore saved session state
 function restoreSession() {
-    const saved = loadSessionState();
+    const saved = loadSessionState(state.activeDeck);
     if (!saved) return;
 
     state.currentScreen = saved.currentScreen || 'dashboard';
@@ -235,7 +343,7 @@ function syncSession() {
         currentReviewIndex: state.currentReviewIndex,
         reviewAnswers: state.reviewAnswers,
         reviewState: state.reviewState
-    });
+    }, state.activeDeck);
 }
 
 // Core screen navigation
@@ -395,6 +503,23 @@ function setupEventListeners() {
         sidebarBackdrop.addEventListener('click', () => toggleDrawer(false));
     }
 
+    // Curriculum Deck Switcher buttons
+    document.getElementById('btn-deck-nata')?.addEventListener('click', () => {
+        switchDeck('nata');
+    });
+    document.getElementById('btn-deck-sat')?.addEventListener('click', () => {
+        switchDeck('sat');
+    });
+    document.getElementById('btn-mobile-deck-toggle')?.addEventListener('click', () => {
+        switchDeck(state.activeDeck === 'nata' ? 'sat' : 'nata');
+    });
+    document.getElementById('btn-dashboard-toggle-deck')?.addEventListener('click', () => {
+        switchDeck(state.activeDeck === 'nata' ? 'sat' : 'nata');
+    });
+    document.getElementById('setting-deck-select')?.addEventListener('change', (e) => {
+        switchDeck(e.target.value);
+    });
+
     // Dashboard actions
     document.getElementById('btn-start-learn').addEventListener('click', () => {
         startLearnSession();
@@ -415,7 +540,7 @@ function setupEventListeners() {
                 state.currentBatch = [];
                 state.currentWordIndex = 0;
                 state.learnAnswers = [];
-                clearSessionState();
+                clearSessionState(state.activeDeck);
                 renderDashboard();
                 showToast('Study batch discarded. Ready for a new batch!', 'info');
             }
@@ -541,8 +666,8 @@ function setupEventListeners() {
     // Settings actions
     document.getElementById('btn-export-progress').addEventListener('click', async () => {
         try {
-            await exportProgress();
-            showToast('Progress exported successfully!', 'success');
+            await exportProgress(state.activeDeck);
+            showToast(`Progress for ${state.activeDeck.toUpperCase()} exported successfully!`, 'success');
         } catch (err) {
             showToast('Backup export failed.', 'danger');
         }
@@ -581,18 +706,31 @@ function setupEventListeners() {
         const reader = new FileReader();
         reader.onload = async (event) => {
             try {
-                const parsedWords = parseVocab(event.target.result);
+                const text = event.target.result;
+                let parsedWords = [];
+                let deckType = state.activeDeck;
+
+                if (text.includes('NATA') || text.includes('Part A:') || text.includes('Part B:')) {
+                    parsedWords = parseNataVocab(text);
+                    deckType = 'nata';
+                } else {
+                    parsedWords = parseVocab(text);
+                }
+
                 if (parsedWords.length === 0) {
                     throw new Error('No words parsed.');
                 }
-                await saveVocabList(parsedWords);
+                await saveVocabList(parsedWords, deckType);
+                state.activeDeck = deckType;
+                localStorage.setItem('Active_Deck', deckType);
                 await loadDatabase();
-                clearSessionState();
+                clearSessionState(deckType);
                 state.currentBatch = [];
                 state.quizQuestions = [];
                 state.reviewQueue = [];
+                updateDeckUI();
                 navigateTo('dashboard');
-                showToast(`Successfully parsed and loaded ${parsedWords.length} words!`, 'success');
+                showToast(`Successfully parsed and loaded ${parsedWords.length} words for ${deckType.toUpperCase()}!`, 'success');
             } catch (err) {
                 showToast('Parsing failed. Make sure the structure is correct.', 'danger');
             }
@@ -602,15 +740,15 @@ function setupEventListeners() {
 
     // Reset buttons
     document.getElementById('btn-reset-progress').addEventListener('click', async () => {
-        if (confirm('Are you sure you want to clear your study progress? Your vocabulary list will be saved.')) {
-            await resetProgress();
+        if (confirm(`Are you sure you want to clear your study progress for the ${state.activeDeck.toUpperCase()} deck? Your vocabulary list will be saved.`)) {
+            await resetProgress(state.activeDeck);
             await loadDatabase();
-            clearSessionState();
+            clearSessionState(state.activeDeck);
             state.currentBatch = [];
             state.quizQuestions = [];
             state.reviewQueue = [];
             navigateTo('dashboard');
-            showToast('Progress history cleared.', 'success');
+            showToast(`${state.activeDeck.toUpperCase()} progress history cleared.`, 'success');
         }
     });
 
@@ -630,6 +768,7 @@ function setupEventListeners() {
 
 // Calculate statistics and update Dashboard UI
 function renderDashboard() {
+    updateDeckUI();
     const totalCount = state.fullVocabList.length;
     const progressMap = new Map(state.progressList.map(p => [p.wordId, p]));
     
@@ -759,6 +898,27 @@ function renderLearnCard() {
     statusPillFront.innerText = progress.status;
     statusPillFront.className = `badge badge-status status-${progress.status}`;
 
+    // Front badges (Category & Priority)
+    const catFront = document.getElementById('card-cat-front');
+    if (catFront) {
+        if (wordItem.category) {
+            catFront.innerText = wordItem.category;
+            catFront.style.display = 'inline-block';
+        } else {
+            catFront.style.display = 'none';
+        }
+    }
+    const prioFront = document.getElementById('card-prio-front');
+    if (prioFront) {
+        if (wordItem.priority) {
+            prioFront.innerText = wordItem.priority;
+            prioFront.className = `badge badge-priority priority-${wordItem.priority.toLowerCase()}`;
+            prioFront.style.display = 'inline-block';
+        } else {
+            prioFront.style.display = 'none';
+        }
+    }
+
     // Back card values
     document.getElementById('card-word-back').innerText = wordItem.word;
     document.getElementById('card-pos-back').innerText = wordItem.partOfSpeech;
@@ -767,6 +927,27 @@ function renderLearnCard() {
     const statusPillBack = document.getElementById('card-status-back');
     statusPillBack.innerText = progress.status;
     statusPillBack.className = `badge badge-status status-${progress.status}`;
+
+    // Back badges (Category & Priority)
+    const catBack = document.getElementById('card-cat-back');
+    if (catBack) {
+        if (wordItem.category) {
+            catBack.innerText = wordItem.category;
+            catBack.style.display = 'inline-block';
+        } else {
+            catBack.style.display = 'none';
+        }
+    }
+    const prioBack = document.getElementById('card-prio-back');
+    if (prioBack) {
+        if (wordItem.priority) {
+            prioBack.innerText = wordItem.priority;
+            prioBack.className = `badge badge-priority priority-${wordItem.priority.toLowerCase()}`;
+            prioBack.style.display = 'inline-block';
+        } else {
+            prioBack.style.display = 'none';
+        }
+    }
 
     // Render senses
     const sensesContainer = document.getElementById('card-senses-container');
@@ -995,7 +1176,7 @@ async function selectQuizChoice(optionIdx) {
     await saveProgress(updatedProgress);
 
     // Refresh database cache
-    state.progressList = await getAllProgress();
+    state.progressList = await getAllProgress(state.activeDeck);
 
     // Daily streak check
     markStudyActivity();
@@ -1168,6 +1349,27 @@ function renderReviewScreen() {
     statusFront.innerText = progress.status;
     statusFront.className = `badge badge-status status-${progress.status}`;
 
+    // Front review badges (Category & Priority)
+    const revCatFront = document.getElementById('rev-cat-front');
+    if (revCatFront) {
+        if (wordItem.category) {
+            revCatFront.innerText = wordItem.category;
+            revCatFront.style.display = 'inline-block';
+        } else {
+            revCatFront.style.display = 'none';
+        }
+    }
+    const revPrioFront = document.getElementById('rev-prio-front');
+    if (revPrioFront) {
+        if (wordItem.priority) {
+            revPrioFront.innerText = wordItem.priority;
+            revPrioFront.className = `badge badge-priority priority-${wordItem.priority.toLowerCase()}`;
+            revPrioFront.style.display = 'inline-block';
+        } else {
+            revPrioFront.style.display = 'none';
+        }
+    }
+
     // Back Card
     document.getElementById('rev-word-back').innerText = wordItem.word;
     document.getElementById('rev-pos-back').innerText = wordItem.partOfSpeech;
@@ -1176,6 +1378,27 @@ function renderReviewScreen() {
     const statusBack = document.getElementById('rev-status-back');
     statusBack.innerText = progress.status;
     statusBack.className = `badge badge-status status-${progress.status}`;
+
+    // Back review badges (Category & Priority)
+    const revCatBack = document.getElementById('rev-cat-back');
+    if (revCatBack) {
+        if (wordItem.category) {
+            revCatBack.innerText = wordItem.category;
+            revCatBack.style.display = 'inline-block';
+        } else {
+            revCatBack.style.display = 'none';
+        }
+    }
+    const revPrioBack = document.getElementById('rev-prio-back');
+    if (revPrioBack) {
+        if (wordItem.priority) {
+            revPrioBack.innerText = wordItem.priority;
+            revPrioBack.className = `badge badge-priority priority-${wordItem.priority.toLowerCase()}`;
+            revPrioBack.style.display = 'inline-block';
+        } else {
+            revPrioBack.style.display = 'none';
+        }
+    }
 
     const sensesContainer = document.getElementById('rev-senses-container');
     renderSensesList(sensesContainer, wordItem.senses);
@@ -1235,7 +1458,7 @@ async function submitReviewFeedback(rating) {
     targetWord.progress = updated;
 
     // Sync database cache
-    state.progressList = await getAllProgress();
+    state.progressList = await getAllProgress(state.activeDeck);
     markStudyActivity();
 
     // Auto advance

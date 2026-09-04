@@ -264,6 +264,7 @@ export function parseVocab(text) {
         
         words.push({
             id: word.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+            deck: 'sat',
             word: word,
             partOfSpeech: partOfSpeech || '(n/a)',
             senses: senses,
@@ -273,3 +274,161 @@ export function parseVocab(text) {
     
     return words;
 }
+
+/**
+ * Parser for Saisha’s NATA & Architecture Entrance Vocabulary Master Deck
+ * Parses 493 cards across Language Interpretation, Architecture & Design, Idioms, and Confusables.
+ */
+export function parseNataVocab(text) {
+    const lines = text.split('\n');
+    const words = [];
+    let currentCard = null;
+
+    function saveCurrentCard() {
+        if (!currentCard) return;
+
+        // Finalize POS
+        let pos = currentCard.partOfSpeech || '';
+        if (!pos) {
+            if (currentCard.code.startsWith('I')) pos = '(idiom)';
+            else if (currentCard.code.startsWith('C')) pos = '(confusable)';
+            else pos = '(n/a)';
+        } else {
+            // Normalize POS formatting
+            pos = pos.trim();
+            if (!pos.startsWith('(')) {
+                pos = `(${pos})`;
+            }
+        }
+
+        // Determine category
+        let category = currentCard.category || '';
+        if (!category) {
+            if (currentCard.code.startsWith('L')) category = 'Language & Reasoning';
+            else if (currentCard.code.startsWith('I')) category = 'Idioms & Phrases';
+            else if (currentCard.code.startsWith('C')) category = 'Confusable Words';
+            else category = 'Architecture & Design';
+        }
+
+        // Finalize senses
+        const senses = [];
+        if (currentCard.confusablePairs && currentCard.confusablePairs.length > 0) {
+            // For confusable word cards, format the distinctions clearly
+            const combinedMeaning = currentCard.confusablePairs
+                .map(cp => `${cp.term}: ${cp.definition}`)
+                .join(' • ');
+
+            senses.push({
+                meaning: combinedMeaning,
+                example: currentCard.sentence || '',
+                synonyms: currentCard.synonyms || [],
+                antonyms: currentCard.antonyms || ''
+            });
+        } else if (currentCard.meaning) {
+            senses.push({
+                meaning: currentCard.meaning,
+                example: currentCard.sentence || '',
+                synonyms: currentCard.synonyms || [],
+                antonyms: currentCard.antonyms || ''
+            });
+        } else {
+            senses.push({
+                meaning: 'Definition available in study guide',
+                example: currentCard.sentence || '',
+                synonyms: currentCard.synonyms || [],
+                antonyms: currentCard.antonyms || ''
+            });
+        }
+
+        const slug = currentCard.word.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+        const id = `nata_${currentCard.code.toLowerCase()}_${slug}`;
+
+        words.push({
+            id,
+            deck: 'nata',
+            code: currentCard.code,
+            word: currentCard.word,
+            partOfSpeech: pos,
+            category: category,
+            priority: currentCard.priority || 'Core',
+            tags: currentCard.tags || [],
+            senses: senses,
+            sectionLetter: currentCard.word.charAt(0).toUpperCase()
+        });
+
+        currentCard = null;
+    }
+
+    for (let rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) continue;
+
+        // Top-level section headers like "# Part V — Quick Recall Lists" finalize current card
+        if (line.startsWith('# ') && !line.startsWith('## ')) {
+            saveCurrentCard();
+            continue;
+        }
+
+        // Check for card heading: ## CODE — WORD
+        const headerMatch = line.match(/^##\s+([A-Z][0-9]{3})\s*[—\-–]\s*(.+)$/);
+        if (headerMatch) {
+            saveCurrentCard();
+            currentCard = {
+                code: headerMatch[1].trim(),
+                word: headerMatch[2].trim(),
+                partOfSpeech: '',
+                meaning: '',
+                synonyms: [],
+                antonyms: '',
+                sentence: '',
+                priority: '',
+                category: '',
+                tags: [],
+                confusablePairs: []
+            };
+            continue;
+        }
+
+        if (!currentCard) continue;
+
+        // Check for key-value bullet points: - **Key:** Value
+        const bulletMatch = line.match(/^-\s*\*\*([^*:]+):?\*\*:?\s*(.*)$/);
+        if (bulletMatch) {
+            const rawKey = bulletMatch[1].trim().toLowerCase();
+            const val = bulletMatch[2].trim();
+
+            if (rawKey === 'part of speech' || rawKey === 'type') {
+                currentCard.partOfSpeech = val;
+            } else if (rawKey === 'meaning') {
+                currentCard.meaning = val;
+            } else if (rawKey === 'synonyms' || rawKey === 'related terms' || rawKey === 'equivalent wording') {
+                currentCard.synonyms = val.split(/[,;]/).map(s => s.replace(/\.$/, '').trim()).filter(Boolean);
+            } else if (rawKey === 'antonyms / contrast' || rawKey === 'antonyms' || rawKey === 'contrast') {
+                currentCard.antonyms = val.replace(/\.$/, '').trim();
+            } else if (rawKey === 'sentence' || rawKey === 'contrast sentence') {
+                currentCard.sentence = val;
+            } else if (rawKey === 'priority') {
+                currentCard.priority = val.replace(/[`*]/g, '').trim();
+            } else if (rawKey === 'category') {
+                currentCard.category = val.replace(/[`*]/g, '').trim();
+            } else if (rawKey === 'tags') {
+                const tagMatches = [...val.matchAll(/`([^`]+)`/g)].map(m => m[1]);
+                if (tagMatches.length > 0) {
+                    currentCard.tags = tagMatches;
+                } else {
+                    currentCard.tags = val.split(/\s+/).filter(Boolean);
+                }
+            } else {
+                // Confusable term breakdown like "affect (verb)" -> "to influence."
+                currentCard.confusablePairs.push({
+                    term: bulletMatch[1].replace(/:$/, '').trim(),
+                    definition: val
+                });
+            }
+        }
+    }
+
+    saveCurrentCard();
+    return words;
+}
+

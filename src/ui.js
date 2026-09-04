@@ -51,7 +51,12 @@ export function renderSensesList(container, senses) {
         
         let synonymsStr = '';
         if (sense.synonyms && sense.synonyms.length > 0) {
-            synonymsStr = `<p class="sense-synonyms"><strong>Synonyms:</strong> ${sense.synonyms.join(', ')}</p>`;
+            synonymsStr = `<p class="sense-synonyms"><strong>Synonyms / Related:</strong> ${sense.synonyms.join(', ')}</p>`;
+        }
+
+        let antonymsStr = '';
+        if (sense.antonyms) {
+            antonymsStr = `<p class="sense-antonyms"><strong>Contrast / Antonyms:</strong> ${sense.antonyms}</p>`;
         }
         
         let exampleStr = sense.example 
@@ -61,6 +66,7 @@ export function renderSensesList(container, senses) {
         senseItem.innerHTML = `
             <p class="sense-meaning">${senseNumStr}${sense.meaning}</p>
             ${synonymsStr}
+            ${antonymsStr}
             ${exampleStr}
         `;
         container.appendChild(senseItem);

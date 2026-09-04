@@ -42,14 +42,20 @@ export function initDb() {
 
 // Vocabulary Store Operations
 
-export async function getAllVocab() {
+export async function getAllVocab(deck = null) {
     const db = await initDb();
     return new Promise((resolve, reject) => {
         const transaction = db.transaction('vocabulary', 'readonly');
         const store = transaction.objectStore('vocabulary');
         const request = store.getAll();
 
-        request.onsuccess = () => resolve(request.result);
+        request.onsuccess = () => {
+            let results = request.result || [];
+            if (deck) {
+                results = results.filter(w => (w.deck || 'sat') === deck);
+            }
+            resolve(results);
+        };
         request.onerror = () => reject(request.error);
     });
 }
@@ -66,7 +72,7 @@ export async function getVocabById(id) {
     });
 }
 
-export async function saveVocabList(words) {
+export async function saveVocabList(words, deck = null) {
     const db = await initDb();
     return new Promise((resolve, reject) => {
         const transaction = db.transaction('vocabulary', 'readwrite');
@@ -75,8 +81,37 @@ export async function saveVocabList(words) {
         transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);
 
-        // Clear existing vocabulary first
-        store.clear();
+        if (deck) {
+            // Delete only existing words for this specific deck
+            const req = store.getAll();
+            req.onsuccess = () => {
+                const existing = req.result || [];
+                for (const item of existing) {
+                    if ((item.deck || 'sat') === deck) {
+                        store.delete(item.id);
+                    }
+                }
+                for (const word of words) {
+                    store.put(word);
+                }
+            };
+        } else {
+            store.clear();
+            for (const word of words) {
+                store.put(word);
+            }
+        }
+    });
+}
+
+export async function saveBulkVocab(words) {
+    const db = await initDb();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('vocabulary', 'readwrite');
+        const store = transaction.objectStore('vocabulary');
+
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
 
         for (const word of words) {
             store.put(word);
@@ -86,14 +121,22 @@ export async function saveVocabList(words) {
 
 // Progress Store Operations
 
-export async function getAllProgress() {
+export async function getAllProgress(deck = null) {
     const db = await initDb();
     return new Promise((resolve, reject) => {
         const transaction = db.transaction('progress', 'readonly');
         const store = transaction.objectStore('progress');
         const request = store.getAll();
 
-        request.onsuccess = () => resolve(request.result);
+        request.onsuccess = () => {
+            let results = request.result || [];
+            if (deck === 'nata') {
+                results = results.filter(p => p.wordId && p.wordId.startsWith('nata_'));
+            } else if (deck === 'sat') {
+                results = results.filter(p => !p.wordId || !p.wordId.startsWith('nata_'));
+            }
+            resolve(results);
+        };
         request.onerror = () => reject(request.error);
     });
 }
@@ -156,15 +199,30 @@ export async function saveBulkProgress(progressList) {
     });
 }
 
-export async function resetProgress() {
+export async function resetProgress(deck = null) {
     const db = await initDb();
     return new Promise((resolve, reject) => {
         const transaction = db.transaction('progress', 'readwrite');
         const store = transaction.objectStore('progress');
-        const request = store.clear();
 
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
+        if (!deck) {
+            const request = store.clear();
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        } else {
+            const req = store.getAll();
+            req.onsuccess = () => {
+                const list = req.result || [];
+                for (const p of list) {
+                    const isNata = p.wordId && p.wordId.startsWith('nata_');
+                    if ((deck === 'nata' && isNata) || (deck === 'sat' && !isNata)) {
+                        store.delete(p.wordId);
+                    }
+                }
+                resolve();
+            };
+            req.onerror = () => reject(req.error);
+        }
     });
 }
 
